@@ -5,30 +5,41 @@ using Taskboard.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PORT")))
+{
+    builder.WebHost.UseUrls($"http://*:{Environment.GetEnvironmentVariable("PORT")}");
+}
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+var connectionString = DatabaseConnection.Resolve(builder.Configuration);
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(connectionString));
 
 builder.Services.AddSingleton<ImageStorageService>();
 
-builder.Services.AddCors(options =>
+var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? ["http://localhost:5173"];
+
+if (corsOrigins.Length > 0)
 {
-    options.AddDefaultPolicy(policy =>
-        policy.WithOrigins("http://localhost:5173")
-              .AllowAnyHeader()
-              .AllowAnyMethod());
-});
+    builder.Services.AddCors(options =>
+    {
+        options.AddDefaultPolicy(policy =>
+            policy.WithOrigins(corsOrigins)
+                  .AllowAnyHeader()
+                  .AllowAnyMethod());
+    });
+}
 
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.EnsureCreated();
-    EnsureImageUrlColumn(db);
+    db.Database.Migrate();
 
     if (!db.Groups.Any())
     {
@@ -63,20 +74,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors();
+if (corsOrigins.Length > 0)
+{
+    app.UseCors();
+}
 app.UseStaticFiles();
 app.MapControllers();
 
 app.Run();
-
-static void EnsureImageUrlColumn(AppDbContext db)
-{
-    try
-    {
-        db.Database.ExecuteSqlRaw("ALTER TABLE Cards ADD COLUMN ImageUrl TEXT NULL");
-    }
-    catch
-    {
-        // Column already exists on databases created after this change.
-    }
-}
