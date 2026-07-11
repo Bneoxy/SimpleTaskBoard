@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --color-board: #0079bf;
+  --color-board-dark: #026aa7;
+  --color-column: #ebecf0;
+  --color-card: #ffffff;
+}
+
+body {
+  @apply m-0 min-h-screen font-sans antialiased;
+}
