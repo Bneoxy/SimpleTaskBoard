@@ -19,7 +19,7 @@ import TaskCard from './TaskCard'
 import TaskModal from './TaskModal'
 import AddTableForm from './AddTableForm'
 
-export default function BoardView({ groupId, groupName }) {
+export default function BoardView({ groupId, groupName, onOpenSidebar }) {
   const {
     board: serverBoard,
     loading,
@@ -42,7 +42,7 @@ export default function BoardView({ groupId, groupName }) {
   }, [serverBoard])
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+      useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   )
 
   const findCard = (cardId) => {
@@ -85,7 +85,7 @@ export default function BoardView({ groupId, groupName }) {
     }
 
     setBoard((current) =>
-      moveCardBetweenTables(current, active.id, activeContainer, overContainer, overIndex)
+        moveCardBetweenTables(current, active.id, activeContainer, overContainer, overIndex)
     )
   }
 
@@ -106,16 +106,16 @@ export default function BoardView({ groupId, groupName }) {
     let nextBoard = board
     const currentContainer = findContainer(board, active.id)
     const currentIndex = currentContainer
-      ? getTable(board, currentContainer).cards.findIndex((card) => card.id === active.id)
-      : -1
+        ? getTable(board, currentContainer).cards.findIndex((card) => card.id === active.id)
+        : -1
 
     if (currentContainer !== overContainer || currentIndex !== overIndex) {
       nextBoard = moveCardBetweenTables(
-        board,
-        active.id,
-        currentContainer ?? origin.tableId,
-        overContainer,
-        overIndex
+          board,
+          active.id,
+          currentContainer ?? origin.tableId,
+          overContainer,
+          overIndex
       )
       setBoard(nextBoard)
     }
@@ -140,67 +140,76 @@ export default function BoardView({ groupId, groupName }) {
 
   if (loading || !board) {
     return (
-      <div className="flex flex-1 items-center justify-center text-white/80">
-        Loading board...
-      </div>
+        <div className="flex flex-1 items-center justify-center text-white/80">
+          Loading board...
+        </div>
     )
   }
 
   return (
-    <main className="flex min-w-0 flex-1 flex-col">
-      <header className="flex items-center justify-between px-6 py-4">
-        <div>
-          <h2 className="text-xl font-bold text-white">{groupName}</h2>
-          {board.description && (
-            <p className="text-sm text-white/70">{board.description}</p>
-          )}
-        </div>
-      </header>
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="flex items-center gap-3 px-4 py-4 sm:px-6">
+          <button
+              onClick={onOpenSidebar}
+              className="shrink-0 rounded-lg p-2 text-white hover:bg-white/10 md:hidden"
+              aria-label="Open menu"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 5h14M3 10h14M3 15h14" strokeLinecap="round" />
+            </svg>
+          </button>
+          <div className="min-w-0">
+            <h2 className="truncate text-lg font-bold text-white sm:text-xl">{groupName}</h2>
+            {board.description && (
+                <p className="truncate text-xs text-white/70 sm:text-sm">{board.description}</p>
+            )}
+          </div>
+        </header>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
-        onDragCancel={handleDragCancel}
-      >
-        <div className="flex flex-1 gap-4 overflow-x-auto px-6 pb-6">
-          {board.tables.map((table) => (
-            <TableColumn
-              key={table.id}
-              table={table}
-              onAddCard={(data) => addCard(table.id, data)}
-              onCardClick={setEditingCard}
-              onDeleteTable={() => deleteTable(table.id)}
+        <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
+        >
+          <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto px-4 pb-4 sm:gap-4 sm:px-6 sm:pb-6">
+            {board.tables.map((table) => (
+                <TableColumn
+                    key={table.id}
+                    table={table}
+                    onAddCard={(data) => addCard(table.id, data)}
+                    onCardClick={setEditingCard}
+                    onDeleteTable={() => deleteTable(table.id)}
+                />
+            ))}
+            <AddTableForm onAdd={addTable} />
+          </div>
+
+          <DragOverlay>
+            {activeCard ? (
+                <div className="w-64 rotate-2 opacity-90 sm:w-72">
+                  <TaskCard card={activeCard} isDragging />
+                </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+
+        {editingCard && (
+            <TaskModal
+                card={editingCard}
+                onClose={() => setEditingCard(null)}
+                onSave={async (data) => {
+                  await updateCard(editingCard.tableId, editingCard.id, data)
+                  setEditingCard(null)
+                }}
+                onDelete={async () => {
+                  await deleteCard(editingCard.tableId, editingCard.id)
+                  setEditingCard(null)
+                }}
             />
-          ))}
-          <AddTableForm onAdd={addTable} />
-        </div>
-
-        <DragOverlay>
-          {activeCard ? (
-            <div className="w-72 rotate-2 opacity-90">
-              <TaskCard card={activeCard} isDragging />
-            </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
-
-      {editingCard && (
-        <TaskModal
-          card={editingCard}
-          onClose={() => setEditingCard(null)}
-          onSave={async (data) => {
-            await updateCard(editingCard.tableId, editingCard.id, data)
-            setEditingCard(null)
-          }}
-          onDelete={async () => {
-            await deleteCard(editingCard.tableId, editingCard.id)
-            setEditingCard(null)
-          }}
-        />
-      )}
-    </main>
+        )}
+      </main>
   )
 }
