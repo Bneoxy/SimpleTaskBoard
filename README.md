@@ -17,3 +17,13 @@ A simple task management application for organizing tasks using a Kanban-style b
 ## Project Structure
 
 This project uses a monorepo architecture to manage both frontend and backend in a single repository.
+
+
+##TodoList
+
+- Adding User Feature to back anf frontend)
+- Task tacker and adding subtask for each task
+- adding profile for each user
+- adding group sending invite for each user on boards
+- handing caching and improving memo in front end 
+  
